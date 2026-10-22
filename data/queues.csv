@@ -1,0 +1,7 @@
+queue_id,queue_name,channel,sl_threshold_sec
+1,Billing,voice,20
+2,Claims,voice,20
+3,Eligibility,voice,20
+4,Provider Line,voice,20
+5,Web Chat,chat,60
+6,Back Office Fax,fax,14400

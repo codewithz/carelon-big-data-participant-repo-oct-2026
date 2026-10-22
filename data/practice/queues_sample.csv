@@ -1,0 +1,5 @@
+queue_id,queue_name,sl_threshold_sec
+1,Billing,20
+2,Claims,20
+3,Eligibility,20
+4,Provider Line,20
