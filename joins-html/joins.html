@@ -1,0 +1,814 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>SQL Join Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column of lab stations. Each station = controls, SQL, source tables, narration caption, growing result.
+   Colour is the teaching device: every table owns a hue, and result cells inherit the hue of the table they came from. */
+:root {
+  --bg: #F2F5F9; --panel: #FFFFFF; --ink: #101A2B; --muted: #566377; --line: #D6DDE8;
+  --emp: #1D5FD6; --emp-bg: #E2ECFD;
+  --dept: #A85F00; --dept-bg: #FFEFCF;
+  --proj: #7436CC; --proj-bg: #EDE3FA;
+  --ok: #0B7F55; --ok-bg: #DAF4E8;
+  --bad: #B83232; --bad-bg: #FBE3E3;
+  --code-bg: #0F1A2B; --code-fg: #E4ECF8; --code-kw: #8DB8FF; --code-dim: #8696AE;
+  --accent: #101A2B; --accent-fg: #F2F5F9;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B111C; --panel: #141D2D; --ink: #E7EDF8; --muted: #94A1B6; --line: #25314A;
+    --emp: #7DABFF; --emp-bg: #17315E;
+    --dept: #F4B64F; --dept-bg: #463210;
+    --proj: #BE9BF7; --proj-bg: #33225C;
+    --ok: #52D6A0; --ok-bg: #11392B;
+    --bad: #FF8A8A; --bad-bg: #4A1E1E;
+    --code-bg: #090E17; --code-fg: #E4ECF8; --code-kw: #8DB8FF; --code-dim: #7C8CA6;
+    --accent: #E7EDF8; --accent-fg: #0B111C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B111C; --panel: #141D2D; --ink: #E7EDF8; --muted: #94A1B6; --line: #25314A;
+  --emp: #7DABFF; --emp-bg: #17315E;
+  --dept: #F4B64F; --dept-bg: #463210;
+  --proj: #BE9BF7; --proj-bg: #33225C;
+  --ok: #52D6A0; --ok-bg: #11392B;
+  --bad: #FF8A8A; --bad-bg: #4A1E1E;
+  --code-bg: #090E17; --code-fg: #E4ECF8; --code-kw: #8DB8FF; --code-dim: #7C8CA6;
+  --accent: #E7EDF8; --accent-fg: #0B111C;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.4rem, 7vw, 4rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; max-width: 65ch; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+.lede { font-size: 1.15rem; color: var(--muted); margin-top: 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.chip { font-family: var(--font-mono); font-size: 0.8rem; padding: 4px 10px; border-radius: 999px; font-weight: 500; }
+.chip.e { background: var(--emp-bg); color: var(--emp); }
+.chip.d { background: var(--dept-bg); color: var(--dept); }
+.chip.p { background: var(--proj-bg); color: var(--proj); }
+.station { display: flex; flex-direction: column; gap: 18px; }
+.station > header p { color: var(--muted); margin-top: 8px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab {
+  font: 600 0.82rem var(--font-mono); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); cursor: pointer; min-height: 40px;
+}
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.tab:focus-visible, .btn:focus-visible, .opt:focus-visible, input[type=range]:focus-visible, .copy:focus-visible { outline: 3px solid var(--emp); outline-offset: 2px; }
+.sqlrow { display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch; }
+pre.sql {
+  flex: 1 1 340px; min-width: 0; margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: 10px;
+  padding: 16px 18px; font: 400 0.9rem/1.7 var(--font-mono); overflow-x: auto; white-space: pre;
+}
+.sql .k { color: var(--code-kw); font-weight: 500; }
+.sql .e { color: #7DABFF; } .sql .d { color: #F4B64F; } .sql .p { color: #BE9BF7; }
+.sql .c { color: var(--code-dim); }
+.venn { flex: 0 0 150px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; gap: 4px; }
+.venn svg { width: 130px; height: auto; display: block; }
+.venn small { color: var(--muted); font-size: 0.75rem; text-align: center; }
+.venn .ring { fill: none; stroke-width: 2; }
+.venn .fillA, .venn .fillB, .venn .fillX { fill: var(--ok); opacity: 0; transition: opacity .35s; }
+.venn .on { opacity: .75; }
+.tables { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 64px; }
+.tables3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.links path { fill: none; stroke: var(--ok); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .45s ease, opacity .4s; }
+.links path.go { stroke-dashoffset: 0; }
+.links path.fade { opacity: 0; }
+.links circle { fill: var(--ok); }
+.tcard { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.tcard h3 { font: 600 0.85rem var(--font-mono); padding: 9px 12px; }
+.tcard.e h3 { background: var(--emp-bg); color: var(--emp); }
+.tcard.d h3 { background: var(--dept-bg); color: var(--dept); }
+.tcard.p h3 { background: var(--proj-bg); color: var(--proj); }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+th { font: 500 0.72rem var(--font-mono); color: var(--muted); text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 7px 12px; border-bottom: 1px solid var(--line); transition: background .25s, color .25s, opacity .3s; }
+tbody tr:last-child td { border-bottom: 0; }
+td.key { font-family: var(--font-mono); font-weight: 500; }
+.null { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); font-style: italic; }
+tr.focus td { background: var(--accent); color: var(--accent-fg); }
+tr.focus td .null { color: var(--accent-fg); opacity: .8; }
+tr.scan td { background: color-mix(in srgb, var(--dept) 30%, transparent); }
+tr.hit td { background: var(--ok-bg); color: var(--ok); }
+tr.miss td { background: var(--bad-bg); color: var(--bad); }
+tr.done td { opacity: .55; }
+tr.dropped td { background: var(--bad-bg); color: var(--bad); opacity: .85; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--bad) 60%, transparent); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { font: 600 0.9rem var(--font-body); padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; min-height: 42px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); min-width: 96px; }
+.speed { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 0.85rem; }
+.speed input { width: 110px; accent-color: var(--emp); }
+.caption {
+  background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--emp); border-radius: 10px;
+  padding: 14px 18px; min-height: 3.6em; font-size: 1.02rem;
+}
+.result { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.result > header { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; background: var(--ok-bg); color: var(--ok); font: 600 0.85rem var(--font-mono); }
+.scroller { max-height: 300px; overflow: auto; }
+.result td.fe { background: var(--emp-bg); color: var(--emp); }
+.result td.fd { background: var(--dept-bg); color: var(--dept); }
+.result td.fp { background: var(--proj-bg); color: var(--proj); }
+.result tr.enter td { animation: slidein .5s ease both; }
+.result tr.keep td.fe .null, .result tr.keep td.fd .null, .result tr.keep td.fp .null { color: inherit; }
+@keyframes slidein { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+.empty { color: var(--muted); padding: 18px 14px; font-size: 0.92rem; }
+.quiz { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.opts { display: flex; flex-wrap: wrap; gap: 10px; }
+.opt { font: 600 1.05rem var(--font-mono); min-width: 72px; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.opt.right { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+.opt.wrong { background: var(--bad-bg); color: var(--bad); border-color: var(--bad); }
+.why { min-height: 3em; color: var(--muted); }
+.traps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.trap { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.trap pre { margin: 0; background: var(--code-bg); color: var(--code-fg); padding: 10px 12px; border-radius: 8px; font: 400 0.8rem/1.6 var(--font-mono); overflow-x: auto; }
+.trap .tag { font: 600 0.72rem var(--font-mono); color: var(--bad); text-transform: uppercase; letter-spacing: .08em; }
+.cheat { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.cheat table { min-width: 560px; }
+.cheat td, .cheat th { padding: 10px 14px; vertical-align: top; }
+.setup { position: relative; }
+.setup pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: 10px; padding: 16px 18px; font: 400 0.82rem/1.65 var(--font-mono); overflow: auto; max-height: 340px; }
+.copy { position: absolute; top: 10px; right: 10px; font: 600 0.8rem var(--font-body); padding: 7px 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+.whybox { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.why-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.why-col .small { color: var(--muted); font-size: 0.9rem; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tally { font: 600 0.85rem var(--font-mono); color: var(--muted); }
+.tally.on { color: var(--accent-fg); background: var(--accent); padding: 6px 10px; border-radius: 6px; align-self: flex-start; }
+td.flash { background: var(--ok-bg); color: var(--ok); font-weight: 600; }
+.reasons { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.reasons article { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.reasons p { color: var(--muted); font-size: 0.93rem; }
+@media (max-width: 560px) {
+  .tables { gap: 30px; }
+  td, th { padding: 6px 8px; }
+  table { font-size: 0.78rem; }
+  .speed { margin-left: 0; }
+  .venn { flex-basis: 100%; flex-direction: row; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .links path, td, .venn .fillA, .venn .fillB, .venn .fillX { transition: none; }
+  .result tr.enter td { animation: none; }
+}
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>SQL Join Lab</h1>
+    <p class="lede">Watch PostgreSQL match rows from one table to another, one row at a time. Pick a join, press Play, and read the caption under the tables. Employees, departments and projects are the only data you need.</p>
+    <div class="legend" aria-label="Colour key">
+      <span class="chip e">employees</span><span class="chip d">departments</span><span class="chip p">projects</span>
+    </div>
+  </header>
+
+  <!-- WHY -->
+  <section class="station" id="why" aria-labelledby="h-why">
+    <header>
+      <h2 id="h-why">What is a join, and why do we need one?</h2>
+      <p>A database keeps each kind of fact in its own table: people in one, departments in another, projects in a third. A join is the instruction that lines two tables up so you can read them as one. To see why the data is split in the first place, try changing a department name below.</p>
+    </header>
+    <div class="whybox">
+      <div class="why-col">
+        <h3>Option A: one big table</h3>
+        <p class="small">Every row repeats its department name.</p>
+        <div class="tcard"><table><thead><tr><th>emp_name</th><th>dept_name</th></tr></thead><tbody id="flat"></tbody></table></div>
+        <div class="tally" id="tallyA">Cells to change: 2</div>
+      </div>
+      <div class="why-col">
+        <h3>Option B: two tables</h3>
+        <p class="small">Each department is written once. People point at it by number.</p>
+        <div class="split">
+          <div class="tcard e"><table><thead><tr><th>emp_name</th><th>dept_id</th></tr></thead><tbody id="sp-e"></tbody></table></div>
+          <div class="tcard d"><table><thead><tr><th>dept_id</th><th>dept_name</th></tr></thead><tbody id="sp-d"></tbody></table></div>
+        </div>
+        <div class="tally" id="tallyB">Cells to change: 1</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="rename" style="min-width:220px">Rename Sales to Revenue</button>
+      <button class="btn" id="renameReset">Undo</button>
+    </div>
+    <div class="caption" id="whycap" aria-live="polite">Press the button. Watch how many places each design has to be edited.</div>
+    <div class="reasons">
+      <article><h3>Write each fact once</h3><p>A department name stored in one row cannot disagree with itself. Fifty thousand call records can all point at the same queue row.</p></article>
+      <article><h3>Fix it in one place</h3><p>Rename a queue or move an agent to a new team with one edit. Every report that reads the data sees the change.</p></article>
+      <article><h3>Join when you need the words</h3><p>A report that says dept_id 10 is useless to a manager. A join looks up 10 and shows Sales, only when you ask, and without changing the stored data.</p></article>
+    </div>
+    <p>In your contact centre data the same thing happens. Each call stores a <code>queue_id</code> and an <code>agent_id</code>. The words Billing and Agent 07 live in the queues and agents tables. Every KPI report by queue or by agent starts with a join.</p>
+  </section>
+
+  <!-- STATION 1 -->
+  <section class="station" id="st1" aria-labelledby="h-st1">
+    <header>
+      <h2 id="h-st1">Two tables, five joins</h2>
+      <p>Every employee has a <code>dept_id</code> that points at a row in departments. A join follows that pointer. The join type decides what happens to rows that have no partner: Dana has no department, and HR has no employees.</p>
+    </header>
+    <div class="tabs" role="tablist" aria-label="Join type" id="tabs1"></div>
+    <div class="sqlrow">
+      <pre class="sql" id="sql1" aria-label="PostgreSQL query"></pre>
+      <div class="venn">
+        <svg viewBox="0 0 130 78" aria-hidden="true">
+          <defs>
+            <clipPath id="clipA"><circle cx="48" cy="39" r="30"/></clipPath>
+          </defs>
+          <circle class="fillA" id="vA" cx="48" cy="39" r="30"/>
+          <circle class="fillB" id="vB" cx="82" cy="39" r="30"/>
+          <circle class="fillX" id="vX" cx="82" cy="39" r="30" clip-path="url(#clipA)"/>
+          <circle class="ring" cx="48" cy="39" r="30" stroke="var(--emp)"/>
+          <circle class="ring" cx="82" cy="39" r="30" stroke="var(--dept)"/>
+        </svg>
+        <small id="vennNote"></small>
+      </div>
+    </div>
+    <div class="tables" id="tables1">
+      <svg class="links" id="links1" aria-hidden="true"></svg>
+      <div class="tcard e"><h3>employees e</h3>
+        <table><thead><tr><th>emp_id</th><th>emp_name</th><th>dept_id</th></tr></thead><tbody id="t-emp"></tbody></table></div>
+      <div class="tcard d"><h3>departments d</h3>
+        <table><thead><tr><th>dept_id</th><th>dept_name</th></tr></thead><tbody id="t-dept"></tbody></table></div>
+    </div>
+    <div class="controls" id="ctl1">
+      <button class="btn primary" data-a="play">Play</button>
+      <button class="btn" data-a="step">Next row</button>
+      <button class="btn" data-a="skip">Show result</button>
+      <button class="btn" data-a="reset">Reset</button>
+      <label class="speed">Speed <input type="range" min="0.5" max="3" step="0.25" value="1" aria-label="Animation speed"></label>
+    </div>
+    <div class="caption" id="cap1" aria-live="polite"></div>
+    <div class="result">
+      <header><span>result</span><span id="cnt1">0 rows</span></header>
+      <div class="scroller" id="sc1"><table><thead><tr><th>emp_name</th><th>dept_name</th></tr></thead><tbody id="res1"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- STATION 2 -->
+  <section class="station" id="st2" aria-labelledby="h-st2">
+    <header>
+      <h2 id="h-st2">Three tables in a chain</h2>
+      <p>A project has a lead, the lead is an employee, and the employee belongs to a department. Joining three tables is the same move twice: follow one pointer, then the next. Switch to LEFT JOIN and watch which projects survive.</p>
+    </header>
+    <div class="tabs" role="tablist" aria-label="Join type for three tables" id="tabs2"></div>
+    <pre class="sql" id="sql2" aria-label="PostgreSQL query"></pre>
+    <div class="tables3">
+      <div class="tcard p"><h3>projects p</h3>
+        <table><thead><tr><th>project_id</th><th>project_name</th><th>lead_id</th></tr></thead><tbody id="t-proj"></tbody></table></div>
+      <div class="tcard e"><h3>employees e</h3>
+        <table><thead><tr><th>emp_id</th><th>emp_name</th><th>dept_id</th></tr></thead><tbody id="t-emp2"></tbody></table></div>
+      <div class="tcard d"><h3>departments d</h3>
+        <table><thead><tr><th>dept_id</th><th>dept_name</th></tr></thead><tbody id="t-dept2"></tbody></table></div>
+    </div>
+    <div class="controls" id="ctl2">
+      <button class="btn primary" data-a="play">Play</button>
+      <button class="btn" data-a="step">Next project</button>
+      <button class="btn" data-a="skip">Show result</button>
+      <button class="btn" data-a="reset">Reset</button>
+      <label class="speed">Speed <input type="range" min="0.5" max="3" step="0.25" value="1" aria-label="Animation speed"></label>
+    </div>
+    <div class="caption" id="cap2" aria-live="polite" style="border-left-color: var(--proj)"></div>
+    <div class="result">
+      <header><span>result</span><span id="cnt2">0 rows</span></header>
+      <div class="scroller" id="sc2"><table><thead><tr><th>project_name</th><th>emp_name</th><th>dept_name</th></tr></thead><tbody id="res2"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="station" aria-labelledby="h-q">
+    <header>
+      <h2 id="h-q">Predict the rows</h2>
+      <p>Before you run a query, say how many rows it returns. If you can predict it, you understand it.</p>
+    </header>
+    <div class="quiz">
+      <pre class="sql" id="qsql" style="flex:none"></pre>
+      <h3 id="qq">How many rows does this return?</h3>
+      <div class="opts" id="qopts"></div>
+      <p class="why" id="qwhy" aria-live="polite"></p>
+      <div class="controls"><button class="btn" id="qnext">Next question</button><span class="null" id="qscore"></span></div>
+    </div>
+  </section>
+
+  <!-- TRAPS -->
+  <section class="station" aria-labelledby="h-t">
+    <header><h2 id="h-t">Three ways joins go wrong</h2></header>
+    <div class="traps">
+      <article class="trap">
+        <span class="tag">Missing ON</span>
+        <h3>Every row meets every row</h3>
+<pre>SELECT e.emp_name, d.dept_name
+FROM employees e
+CROSS JOIN departments d;</pre>
+        <p>5 employees times 4 departments is 20 rows. In an old-style query with a comma between tables and no WHERE, you get the same thing by accident. If a result has far more rows than either table, look for a missing condition.</p>
+      </article>
+      <article class="trap">
+        <span class="tag">Silent loss</span>
+        <h3>INNER JOIN drops without a word</h3>
+<pre>SELECT count(*)
+FROM employees e
+JOIN departments d
+  ON d.dept_id = e.dept_id;
+-- 4, but there are 5 employees</pre>
+        <p>Dana's <code>dept_id</code> is NULL. NULL is not equal to anything, not even another NULL, so Dana never matches. Nothing warns you. Compare the count with the plain table before you trust a report.</p>
+      </article>
+      <article class="trap">
+        <span class="tag">Repeats</span>
+        <h3>One-to-many repeats the one</h3>
+<pre>SELECT d.dept_name, e.emp_name
+FROM departments d
+LEFT JOIN employees e
+  ON e.dept_id = d.dept_id;
+-- Sales appears twice</pre>
+        <p>Sales has two employees, so the Sales row is repeated, once per employee. Adding up a department-level number after this join counts it twice. Join, then check the row count.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- CHEAT SHEET -->
+  <section class="station" aria-labelledby="h-c">
+    <header><h2 id="h-c">Which join do I use?</h2></header>
+    <div class="cheat">
+      <table>
+        <thead><tr><th>Join</th><th>Keeps</th><th>Use it when</th></tr></thead>
+        <tbody>
+          <tr><td class="key">INNER JOIN</td><td>Only rows with a partner on both sides</td><td>You only care about complete pairs</td></tr>
+          <tr><td class="key">LEFT JOIN</td><td>Every row from the first table, NULL where no partner</td><td>You need every call, agent or project, even those with missing details</td></tr>
+          <tr><td class="key">RIGHT JOIN</td><td>Every row from the second table</td><td>Rare. Swap the table order and use LEFT JOIN instead</td></tr>
+          <tr><td class="key">FULL OUTER JOIN</td><td>Every row from both tables</td><td>Comparing two lists to find what is missing from each</td></tr>
+          <tr><td class="key">CROSS JOIN</td><td>Every pairing</td><td>Building a grid, such as every queue for every hour</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section class="station" aria-labelledby="h-s">
+    <header>
+      <h2 id="h-s">Run it yourself in PostgreSQL</h2>
+      <p>Paste this into the pgAdmin Query Tool in a scratch database and press F5. Then try every query on this page. The last line removes the tables again.</p>
+    </header>
+    <div class="setup">
+      <button class="copy" id="copy">Copy</button>
+      <pre id="setupsql"></pre>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var DEPTS = [{id:10,name:"Sales"},{id:20,name:"Finance"},{id:30,name:"IT"},{id:40,name:"HR"}];
+  var EMPS = [{id:1,name:"Asha",dept:10},{id:2,name:"Ben",dept:20},{id:3,name:"Chen",dept:10},{id:4,name:"Dana",dept:null},{id:5,name:"Eli",dept:30}];
+  var PROJS = [{id:101,name:"Website Revamp",lead:5},{id:102,name:"Budget 2027",lead:2},{id:103,name:"Q4 Campaign",lead:1},{id:104,name:"Onboarding",lead:4},{id:105,name:"Policy Update",lead:null}];
+  var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function $(id) { return document.getElementById(id); }
+  function nul(v) { return v === null ? '<span class="null">NULL</span>' : String(v); }
+  function tr(cells, cls) { var r = document.createElement("tr"); if (cls) r.className = cls; r.innerHTML = cells; return r; }
+  function fillTable(tbody, rows, mk) { tbody.innerHTML = ""; return rows.map(function (r) { var x = mk(r); tbody.appendChild(x); return x; }); }
+
+  /* ---------- SQL highlighting ---------- */
+  function hl(sql) {
+    return sql.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/(--[^\n]*)/g, '<span class="c">$1</span>')
+      .replace(/\b(SELECT|FROM|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL OUTER JOIN|CROSS JOIN|JOIN|ON)\b/g, '<span class="k">$1</span>');
+  }
+  function colorize(sql) {
+    // protect keyword spans, then tint table aliases and names
+    var out = hl(sql);
+    out = out.replace(/(<span class="[kc]">[^<]*<\/span>)|\b(p\.\w+|projects p?|\bp\b)|\b(e\.\w+|employees e?|\be\b)|\b(d\.\w+|departments d?|\bd\b)/g,
+      function (m, kw, p, e, d) {
+        if (kw) return kw;
+        if (p) return '<span class="p">' + p + "</span>";
+        if (e) return '<span class="e">' + e + "</span>";
+        if (d) return '<span class="d">' + d + "</span>";
+        return m;
+      });
+    return out;
+  }
+
+  /* ---------- player ---------- */
+  function makePlayer(root, hooks) {
+    var beats = [], idx = 0, playing = false, running = false, token = 0, speed = 1;
+    var CANCEL = {};
+    var bPlay = root.querySelector('[data-a="play"]'), bStep = root.querySelector('[data-a="step"]');
+    var rng = root.querySelector("input[type=range]");
+    function sync() {
+      bPlay.textContent = playing ? "Pause" : (idx >= beats.length && beats.length ? "Replay" : (idx > 0 ? "Resume" : "Play"));
+    }
+    async function runBeat() {
+      var my = token;
+      var t = function (ms) { return new Promise(function (res, rej) { setTimeout(function () { my === token ? res() : rej(CANCEL); }, ms / speed); }); };
+      running = true; sync();
+      try { await beats[idx](t); idx++; }
+      catch (e) { if (e !== CANCEL) throw e; return; }
+      if (my === token) { running = false; sync(); }
+    }
+    async function loop() {
+      var my = token;
+      while (playing && idx < beats.length && my === token) { await runBeat(); }
+      if (my === token) { playing = false; sync(); }
+    }
+    var api = {
+      load: function (b) { beats = b; api.reset(); },
+      reset: function () { token++; running = false; playing = false; idx = 0; hooks.onReset(); sync(); },
+      play: function () {
+        if (playing) { playing = false; sync(); return; }
+        if (idx >= beats.length) api.reset();
+        playing = true; sync(); if (!running) loop();
+      },
+      step: function () {
+        playing = false;
+        if (idx >= beats.length) api.reset();
+        if (!running) runBeat();
+      },
+      skip: function () { token++; running = false; playing = false; hooks.onReset(); hooks.onFinal(); idx = beats.length; sync(); }
+    };
+    root.addEventListener("click", function (ev) {
+      var a = ev.target.getAttribute && ev.target.getAttribute("data-a");
+      if (a && api[a]) api[a]();
+    });
+    rng.addEventListener("input", function () { speed = parseFloat(rng.value); });
+    return api;
+  }
+
+  /* =====================================================
+     STATION 1: employees x departments
+     ===================================================== */
+  var JOIN1 = {
+    "INNER":  { kw: "INNER JOIN",      on: true,  venn: "A", note: "Only the overlap" },
+    "LEFT":   { kw: "LEFT JOIN",       on: true,  venn: "L", note: "All of employees" },
+    "RIGHT":  { kw: "RIGHT JOIN",      on: true,  venn: "R", note: "All of departments" },
+    "FULL":   { kw: "FULL OUTER JOIN", on: true,  venn: "F", note: "Everything" },
+    "CROSS":  { kw: "CROSS JOIN",      on: false, venn: "X", note: "Every pairing" }
+  };
+  var type1 = "INNER";
+  var rowE, rowD, res1 = $("res1"), cap1 = $("cap1"), links1 = $("links1"), n1 = 0;
+
+  rowE = fillTable($("t-emp"), EMPS, function (e) { return tr("<td class='key'>" + e.id + "</td><td>" + e.name + "</td><td class='key'>" + nul(e.dept) + "</td>"); });
+  rowD = fillTable($("t-dept"), DEPTS, function (d) { return tr("<td class='key'>" + d.id + "</td><td>" + d.name + "</td>"); });
+
+  function sql1() {
+    var j = JOIN1[type1];
+    var s = "SELECT e.emp_name, d.dept_name\nFROM employees e\n" + j.kw + " departments d" + (j.on ? "\n  ON d.dept_id = e.dept_id;" : ";");
+    $("sql1").innerHTML = colorize(s);
+  }
+  function venn1() {
+    var v = JOIN1[type1].venn;
+    $("vA").classList.toggle("on", v === "L" || v === "F" || v === "X");
+    $("vB").classList.toggle("on", v === "R" || v === "F" || v === "X");
+    $("vX").classList.toggle("on", v === "A");
+    $("vennNote").textContent = JOIN1[type1].note;
+  }
+  function computeRows1(type) {
+    var rows = [], seenD = {}, on = JOIN1[type].on;
+    EMPS.forEach(function (e) {
+      var hits = DEPTS.filter(function (d) { return !on || (e.dept !== null && e.dept === d.id); });
+      hits.forEach(function (d) { rows.push([e.name, d.name, "pair"]); seenD[d.id] = true; });
+      if (!hits.length && (type === "LEFT" || type === "FULL")) rows.push([e.name, null, "keep"]);
+    });
+    if (type === "RIGHT" || type === "FULL") DEPTS.forEach(function (d) { if (!seenD[d.id]) rows.push([null, d.name, "keep"]); });
+    return rows;
+  }
+  function summary1(type, n) {
+    return ({
+      INNER: "Done: " + n + " rows. Dana (no department) and HR (no employees) found no partner, so neither is in the result.",
+      LEFT: "Done: " + n + " rows. Every employee appears. Dana gets NULL for her department. HR is missing because no employee points at it.",
+      RIGHT: "Done: " + n + " rows. Every department appears. HR gets NULL for the employee. Dana is missing because her department is NULL.",
+      FULL: "Done: " + n + " rows. Nothing is lost. NULL marks every row that had no partner.",
+      CROSS: "Done: " + n + " rows. That is 5 employees times 4 departments, every possible pairing."
+    })[type];
+  }
+  function addRes1(row) {
+    var r = tr("<td class='fe'>" + nul(row[0]) + "</td><td class='fd'>" + nul(row[1]) + "</td>", (REDUCED ? "" : "enter ") + (row[2] === "keep" ? "keep" : ""));
+    res1.appendChild(r); n1++;
+    $("cnt1").textContent = n1 + (n1 === 1 ? " row" : " rows");
+    $("sc1").scrollTop = $("sc1").scrollHeight;
+  }
+  function clearMarks1() { rowE.concat(rowD).forEach(function (r) { r.className = ""; }); }
+  function clearLinks1() { links1.innerHTML = ""; }
+  function drawLink(i, j, cls) {
+    var box = $("tables1").getBoundingClientRect();
+    var a = rowE[i].lastElementChild.getBoundingClientRect(), b = rowD[j].firstElementChild.getBoundingClientRect();
+    var x1 = a.right - box.left, y1 = a.top + a.height / 2 - box.top, x2 = b.left - box.left, y2 = b.top + b.height / 2 - box.top;
+    var dx = (x2 - x1) / 2;
+    var p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", "M" + x1 + " " + y1 + " C" + (x1 + dx) + " " + y1 + " " + (x2 - dx) + " " + y2 + " " + x2 + " " + y2);
+    p.setAttribute("pathLength", "1");
+    links1.appendChild(p);
+    [[x1, y1], [x2, y2]].forEach(function (c) {
+      var k = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      k.setAttribute("cx", c[0]); k.setAttribute("cy", c[1]); k.setAttribute("r", 4); links1.appendChild(k);
+    });
+    requestAnimationFrame(function () { p.classList.add("go"); });
+  }
+  function say1(t) { cap1.textContent = t; }
+
+  var P1 = makePlayer($("ctl1"), {
+    onReset: function () {
+      res1.innerHTML = ""; n1 = 0; $("cnt1").textContent = "0 rows"; clearMarks1(); clearLinks1();
+      say1("Press Play. The query reads the first table one row at a time and looks for partners in the second.");
+    },
+    onFinal: function () {
+      var rows = computeRows1(type1);
+      rows.forEach(function (r) {
+        var x = tr("<td class='fe'>" + nul(r[0]) + "</td><td class='fd'>" + nul(r[1]) + "</td>", r[2] === "keep" ? "keep" : "");
+        res1.appendChild(x);
+      });
+      n1 = rows.length; $("cnt1").textContent = n1 + " rows";
+      var on = JOIN1[type1].on, seenD = {};
+      EMPS.forEach(function (e, i) {
+        var has = DEPTS.some(function (d) { return !on || (e.dept !== null && e.dept === d.id); });
+        DEPTS.forEach(function (d) { if (!on || (e.dept !== null && e.dept === d.id)) seenD[d.id] = true; });
+        if (!has && !(type1 === "LEFT" || type1 === "FULL")) rowE[i].className = "dropped";
+      });
+      DEPTS.forEach(function (d, j) { if (!seenD[d.id] && !(type1 === "RIGHT" || type1 === "FULL")) rowD[j].className = "dropped"; });
+      say1(summary1(type1, n1));
+    }
+  });
+
+  function beats1() {
+    var type = type1, on = JOIN1[type].on, matchedD = {}, b = [];
+    EMPS.forEach(function (e, i) {
+      b.push(async function (t) {
+        clearLinks1();
+        rowE[i].className = "focus";
+        say1(on ? ("Take " + e.name + ". Their dept_id is " + (e.dept === null ? "NULL" : e.dept) + ". Which department row has the same number?") : ("Take " + e.name + ". With no ON condition, every department is a partner."));
+        await t(on ? 800 : 500);
+        var hits = [];
+        for (var j = 0; j < DEPTS.length; j++) {
+          var d = DEPTS[j], m = !on || (e.dept !== null && e.dept === d.id);
+          rowD[j].className = "scan";
+          say1(on ? (e.dept === null ? ("NULL = " + d.id + "? NULL never equals anything, so this is not a match.") : (e.dept + " = " + d.id + "?  " + (m ? "Yes. A match." : "No."))) : (e.name + " pairs with " + d.name + "."));
+          await t(on ? (m ? 650 : 420) : 300);
+          if (m) { rowD[j].className = "hit"; drawLink(i, j); hits.push(j); matchedD[d.id] = true; await t(on ? 350 : 150); }
+          else rowD[j].className = "";
+        }
+        if (hits.length) {
+          for (var h = 0; h < hits.length; h++) { addRes1([e.name, DEPTS[hits[h]].name, "pair"]); if (on) { say1("Matched. A new result row combines " + e.name + " with " + DEPTS[hits[h]].name + "."); await t(500); } else await t(120); }
+        } else if (type === "LEFT" || type === "FULL") {
+          addRes1([e.name, null, "keep"]);
+          say1("No partner for " + e.name + ". " + JOIN1[type].kw + " keeps the row and fills the department with NULL.");
+          await t(1100);
+        } else {
+          rowE[i].className = "dropped";
+          say1("No partner for " + e.name + ". " + JOIN1[type].kw + " drops this row. There is no error and no warning.");
+          await t(1300);
+        }
+        clearLinks1();
+        rowD.forEach(function (r, j) { if (r.className === "hit" || r.className === "scan") r.className = matchedD[DEPTS[j].id] ? "done" : ""; });
+        if (rowE[i].className === "focus") rowE[i].className = "done";
+        await t(250);
+      });
+    });
+    b.push(async function (t) {
+      var left = DEPTS.filter(function (d) { return !matchedD[d.id]; });
+      if (type === "RIGHT" || type === "FULL") {
+        for (var k = 0; k < left.length; k++) {
+          var j = DEPTS.indexOf(left[k]);
+          rowD[j].className = "focus";
+          say1("Last check: " + left[k].name + " has no employee pointing at it. " + JOIN1[type].kw + " keeps it and fills the employee with NULL.");
+          await t(900);
+          addRes1([null, left[k].name, "keep"]);
+          await t(700);
+          rowD[j].className = "done";
+        }
+      } else if (type !== "CROSS") {
+        left.forEach(function (d) { rowD[DEPTS.indexOf(d)].className = "dropped"; });
+        say1("Last check: " + left.map(function (d) { return d.name; }).join(", ") + " has no employees. " + type + " JOIN does not look for it.");
+        await t(1300);
+      }
+      say1(summary1(type, n1));
+      await t(200);
+    });
+    return b;
+  }
+
+  var tabs1 = $("tabs1");
+  Object.keys(JOIN1).forEach(function (k) {
+    var b = document.createElement("button");
+    b.className = "tab"; b.setAttribute("role", "tab"); b.textContent = JOIN1[k].kw.replace(" JOIN", "").replace(" OUTER", ""); b.dataset.k = k;
+    b.textContent = k === "FULL" ? "FULL OUTER" : k;
+    tabs1.appendChild(b);
+  });
+  function setTab1(k, auto) {
+    type1 = k;
+    Array.prototype.forEach.call(tabs1.children, function (b) { b.setAttribute("aria-selected", b.dataset.k === k ? "true" : "false"); });
+    sql1(); venn1(); P1.load(beats1());
+    if (auto && !REDUCED) P1.play(); else P1.skip();
+  }
+  tabs1.addEventListener("click", function (ev) { var k = ev.target.dataset && ev.target.dataset.k; if (k) setTab1(k, true); });
+  window.addEventListener("resize", clearLinks1);
+
+  /* =====================================================
+     STATION 2: projects -> employees -> departments
+     ===================================================== */
+  var type2 = "INNER", cap2 = $("cap2"), res2 = $("res2"), n2 = 0;
+  var rowP = fillTable($("t-proj"), PROJS, function (p) { return tr("<td class='key'>" + p.id + "</td><td>" + p.name + "</td><td class='key'>" + nul(p.lead) + "</td>"); });
+  var rowE2 = fillTable($("t-emp2"), EMPS, function (e) { return tr("<td class='key'>" + e.id + "</td><td>" + e.name + "</td><td class='key'>" + nul(e.dept) + "</td>"); });
+  var rowD2 = fillTable($("t-dept2"), DEPTS, function (d) { return tr("<td class='key'>" + d.id + "</td><td>" + d.name + "</td>"); });
+
+  function sql2() {
+    var kw = type2 === "INNER" ? "INNER JOIN" : "LEFT JOIN";
+    $("sql2").innerHTML = colorize("SELECT p.project_name, e.emp_name, d.dept_name\nFROM projects p\n" + kw + " employees e\n  ON e.emp_id = p.lead_id\n" + kw + " departments d\n  ON d.dept_id = e.dept_id;");
+  }
+  function empOf(p) { return EMPS.filter(function (e) { return p.lead !== null && e.id === p.lead; })[0] || null; }
+  function deptOf(e) { return e ? (DEPTS.filter(function (d) { return e.dept !== null && d.id === e.dept; })[0] || null) : null; }
+  function computeRows2() {
+    var rows = [];
+    PROJS.forEach(function (p) {
+      var e = empOf(p), d = deptOf(e);
+      if (type2 === "INNER") { if (e && d) rows.push([p.name, e.name, d.name]); }
+      else rows.push([p.name, e ? e.name : null, d ? d.name : null]);
+    });
+    return rows;
+  }
+  function row2(r) { return tr("<td class='fp'>" + nul(r[0]) + "</td><td class='fe'>" + nul(r[1]) + "</td><td class='fd'>" + nul(r[2]) + "</td>", (r[1] === null || r[2] === null) ? "keep" : ""); }
+  function say2(t) { cap2.textContent = t; }
+  function clearMarks2() { rowP.concat(rowE2, rowD2).forEach(function (r) { r.className = ""; }); }
+  function summary2(n) {
+    return type2 === "INNER"
+      ? "Done: " + n + " rows from 5 projects. Onboarding is lost because its lead, Dana, has no department. Policy Update is lost because it has no lead. Neither raised an error."
+      : "Done: " + n + " rows, one per project. Onboarding shows NULL for the department and Policy Update shows NULL for both. LEFT JOIN kept every project.";
+  }
+  var P2 = makePlayer($("ctl2"), {
+    onReset: function () { res2.innerHTML = ""; n2 = 0; $("cnt2").textContent = "0 rows"; clearMarks2(); say2("Press Play. Each project follows its lead_id to an employee, then the employee's dept_id to a department."); },
+    onFinal: function () {
+      var rows = computeRows2(); rows.forEach(function (r) { res2.appendChild(row2(r)); });
+      n2 = rows.length; $("cnt2").textContent = n2 + " rows";
+      PROJS.forEach(function (p, i) { var e = empOf(p), d = deptOf(e); if (type2 === "INNER" && !(e && d)) rowP[i].className = "dropped"; });
+      say2(summary2(n2));
+    }
+  });
+  function beats2() {
+    return PROJS.map(function (p, i) {
+      return async function (t) {
+        clearMarks2();
+        var e = empOf(p), d = deptOf(e), left = type2 === "LEFT";
+        rowP[i].className = "focus";
+        say2(p.name + " has lead_id " + (p.lead === null ? "NULL" : p.lead) + ". Find the employee with that emp_id.");
+        await t(900);
+        if (!e) {
+          rowE2.forEach(function (r) { r.className = "miss"; });
+          say2(p.lead === null ? "lead_id is NULL, so no employee can match." : "No employee has that id.");
+          await t(900); rowE2.forEach(function (r) { r.className = ""; });
+          if (left) { res2.appendChild(row2([p.name, null, null])); n2++; say2("LEFT JOIN keeps " + p.name + " and fills employee and department with NULL."); }
+          else { rowP[i].className = "dropped"; say2("INNER JOIN drops " + p.name + ". The first join already removed it, so the second join never sees it."); }
+        } else {
+          var ei = EMPS.indexOf(e); rowE2[ei].className = "hit";
+          say2("Found " + e.name + ". " + e.name + "'s dept_id is " + (e.dept === null ? "NULL" : e.dept) + ". Find that department.");
+          await t(1000);
+          if (!d) {
+            rowD2.forEach(function (r) { r.className = "miss"; });
+            say2("dept_id is NULL, so no department matches.");
+            await t(900); rowD2.forEach(function (r) { r.className = ""; });
+            if (left) { res2.appendChild(row2([p.name, e.name, null])); n2++; say2("LEFT JOIN keeps " + p.name + " with " + e.name + " and a NULL department."); }
+            else { rowP[i].className = "dropped"; rowE2[ei].className = ""; say2("INNER JOIN drops " + p.name + " because " + e.name + " has no department. The project quietly disappears."); }
+          } else {
+            rowD2[DEPTS.indexOf(d)].className = "hit";
+            say2("Found " + d.name + ". The chain is complete: " + p.name + " > " + e.name + " > " + d.name + ".");
+            await t(700);
+            res2.appendChild(row2([p.name, e.name, d.name])); n2++;
+          }
+        }
+        $("cnt2").textContent = n2 + (n2 === 1 ? " row" : " rows");
+        $("sc2").scrollTop = $("sc2").scrollHeight;
+        await t(1300);
+        if (i === PROJS.length - 1) { clearMarks2(); say2(summary2(n2)); await t(200); }
+      };
+    });
+  }
+  var tabs2 = $("tabs2");
+  ["INNER", "LEFT"].forEach(function (k) {
+    var b = document.createElement("button");
+    b.className = "tab"; b.setAttribute("role", "tab"); b.textContent = k; b.dataset.k = k; tabs2.appendChild(b);
+  });
+  function setTab2(k, auto) {
+    type2 = k;
+    Array.prototype.forEach.call(tabs2.children, function (b) { b.setAttribute("aria-selected", b.dataset.k === k ? "true" : "false"); });
+    sql2(); P2.load(beats2());
+    if (auto && !REDUCED) P2.play(); else P2.skip();
+  }
+  tabs2.addEventListener("click", function (ev) { var k = ev.target.dataset && ev.target.dataset.k; if (k) setTab2(k, true); });
+
+  /* =====================================================
+     QUIZ
+     ===================================================== */
+  var QUIZ = [
+    { sql: "SELECT e.emp_name, d.dept_name\nFROM employees e\nINNER JOIN departments d\n  ON d.dept_id = e.dept_id;", a: 4, o: [3, 4, 5, 9], why: "Asha, Ben, Chen and Eli each match one department. Dana has a NULL dept_id, so Dana is dropped." },
+    { sql: "SELECT e.emp_name, d.dept_name\nFROM employees e\nLEFT JOIN departments d\n  ON d.dept_id = e.dept_id;", a: 5, o: [4, 5, 6, 20], why: "LEFT JOIN keeps all 5 employees. Dana appears with a NULL department." },
+    { sql: "SELECT e.emp_name, d.dept_name\nFROM employees e\nRIGHT JOIN departments d\n  ON d.dept_id = e.dept_id;", a: 5, o: [4, 5, 6, 9], why: "Four matched pairs plus HR, which has no employee. Dana is not kept because RIGHT JOIN protects departments, not employees." },
+    { sql: "SELECT e.emp_name, d.dept_name\nFROM employees e\nFULL OUTER JOIN departments d\n  ON d.dept_id = e.dept_id;", a: 6, o: [4, 5, 6, 9], why: "Four matched pairs, plus Dana with no department, plus HR with no employee." },
+    { sql: "SELECT e.emp_name, d.dept_name\nFROM employees e\nCROSS JOIN departments d;", a: 20, o: [5, 9, 20, 25], why: "No condition, so 5 employees times 4 departments gives 20 pairings." },
+    { sql: "SELECT d.dept_name, e.emp_name\nFROM departments d\nLEFT JOIN employees e\n  ON e.dept_id = d.dept_id;", a: 5, o: [4, 5, 6, 9], why: "Sales has two employees, so it appears twice. Finance and IT once each. HR appears once with a NULL employee. That is 2 + 1 + 1 + 1." },
+    { sql: "SELECT p.project_name, e.emp_name, d.dept_name\nFROM projects p\nINNER JOIN employees e ON e.emp_id = p.lead_id\nINNER JOIN departments d ON d.dept_id = e.dept_id;", a: 3, o: [2, 3, 4, 5], why: "Onboarding's lead has no department and Policy Update has no lead. Both drop out, leaving 3 of 5 projects." }
+  ];
+  var qi = 0, qright = 0, qtotal = 0, answered = false;
+  function showQ() {
+    var q = QUIZ[qi]; answered = false;
+    $("qsql").innerHTML = colorize(q.sql);
+    $("qwhy").textContent = "";
+    var box = $("qopts"); box.innerHTML = "";
+    q.o.forEach(function (n) {
+      var b = document.createElement("button"); b.className = "opt"; b.textContent = n; b.dataset.n = n; box.appendChild(b);
+    });
+    $("qscore").textContent = qtotal ? qright + " of " + qtotal + " correct" : "";
+  }
+  $("qopts").addEventListener("click", function (ev) {
+    var n = ev.target.dataset && ev.target.dataset.n; if (n === undefined || answered) return;
+    answered = true; qtotal++;
+    var ok = parseInt(n, 10) === QUIZ[qi].a; if (ok) qright++;
+    Array.prototype.forEach.call($("qopts").children, function (b) {
+      if (parseInt(b.dataset.n, 10) === QUIZ[qi].a) b.classList.add("right");
+      else if (b === ev.target) b.classList.add("wrong");
+    });
+    $("qwhy").textContent = (ok ? "Correct. " : "Not quite. The answer is " + QUIZ[qi].a + ". ") + QUIZ[qi].why;
+    $("qscore").textContent = qright + " of " + qtotal + " correct";
+  });
+  $("qnext").addEventListener("click", function () { qi = (qi + 1) % QUIZ.length; showQ(); });
+
+  /* =====================================================
+     SETUP SCRIPT
+     ===================================================== */
+  var SETUP = [
+    "-- Scratch tables for the join lab",
+    "CREATE TABLE departments (dept_id int PRIMARY KEY, dept_name text NOT NULL);",
+    "CREATE TABLE employees (emp_id int PRIMARY KEY, emp_name text NOT NULL, dept_id int REFERENCES departments (dept_id));",
+    "CREATE TABLE projects (project_id int PRIMARY KEY, project_name text NOT NULL, lead_id int REFERENCES employees (emp_id));",
+    "",
+    "INSERT INTO departments VALUES (10, 'Sales'), (20, 'Finance'), (30, 'IT'), (40, 'HR');",
+    "INSERT INTO employees VALUES (1, 'Asha', 10), (2, 'Ben', 20), (3, 'Chen', 10), (4, 'Dana', NULL), (5, 'Eli', 30);",
+    "INSERT INTO projects VALUES (101, 'Website Revamp', 5), (102, 'Budget 2027', 2), (103, 'Q4 Campaign', 1), (104, 'Onboarding', 4), (105, 'Policy Update', NULL);",
+    "",
+    "-- Try them: 4, 5, 5, 6 and 20 rows",
+    "SELECT e.emp_name, d.dept_name FROM employees e INNER JOIN departments d ON d.dept_id = e.dept_id;",
+    "SELECT e.emp_name, d.dept_name FROM employees e LEFT JOIN departments d ON d.dept_id = e.dept_id;",
+    "SELECT e.emp_name, d.dept_name FROM employees e RIGHT JOIN departments d ON d.dept_id = e.dept_id;",
+    "SELECT e.emp_name, d.dept_name FROM employees e FULL OUTER JOIN departments d ON d.dept_id = e.dept_id;",
+    "SELECT e.emp_name, d.dept_name FROM employees e CROSS JOIN departments d;",
+    "",
+    "-- Three tables: 3 rows, then 5 rows",
+    "SELECT p.project_name, e.emp_name, d.dept_name FROM projects p INNER JOIN employees e ON e.emp_id = p.lead_id INNER JOIN departments d ON d.dept_id = e.dept_id;",
+    "SELECT p.project_name, e.emp_name, d.dept_name FROM projects p LEFT JOIN employees e ON e.emp_id = p.lead_id LEFT JOIN departments d ON d.dept_id = e.dept_id;",
+    "",
+    "-- Clean up",
+    "DROP TABLE projects, employees, departments;"
+  ].join("\n");
+  $("setupsql").textContent = SETUP;
+  $("copy").addEventListener("click", function () {
+    var btn = $("copy");
+    function selectIt() {
+      var r = document.createRange(); r.selectNodeContents($("setupsql"));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected. Press Ctrl+C";
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(SETUP).then(function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1800); }, selectIt);
+    } else selectIt();
+  });
+
+  /* ---------- why section ---------- */
+  var FLAT = [["Asha", "Sales"], ["Ben", "Finance"], ["Chen", "Sales"], ["Eli", "IT"]];
+  function drawWhy(renamed) {
+    var nm = renamed ? "Revenue" : "Sales";
+    $("flat").innerHTML = FLAT.map(function (r) {
+      var hit = r[1] === "Sales";
+      return "<tr><td>" + r[0] + "</td><td" + (renamed && hit ? " class='flash'" : "") + ">" + (hit ? nm : r[1]) + "</td></tr>";
+    }).join("");
+    $("sp-e").innerHTML = EMPS.filter(function (e) { return e.dept !== null; }).map(function (e) { return "<tr><td>" + e.name + "</td><td class='key'>" + e.dept + "</td></tr>"; }).join("");
+    $("sp-d").innerHTML = DEPTS.map(function (d) {
+      var hit = d.id === 10;
+      return "<tr><td class='key'>" + d.id + "</td><td" + (renamed && hit ? " class='flash'" : "") + ">" + (hit ? nm : d.name) + "</td></tr>";
+    }).join("");
+    $("tallyA").className = "tally" + (renamed ? " on" : "");
+    $("tallyB").className = "tally" + (renamed ? " on" : "");
+    $("tallyA").textContent = renamed ? "2 cells edited. Miss one and Sales and Revenue both exist." : "Cells to change: 2";
+    $("tallyB").textContent = renamed ? "1 cell edited. Everyone who points at 10 sees Revenue." : "Cells to change: 1";
+    $("whycap").textContent = renamed
+      ? "Option B wins. The join is how a report still shows the department name next to each person, as the next section demonstrates."
+      : "Press the button. Watch how many places each design has to be edited.";
+  }
+  $("rename").addEventListener("click", function () { drawWhy(true); });
+  $("renameReset").addEventListener("click", function () { drawWhy(false); });
+  drawWhy(false);
+
+  /* ---------- boot ---------- */
+  setTab1("INNER", false);
+  setTab2("INNER", false);
+  showQ();
+  $("cap1").textContent = summary1("INNER", computeRows1("INNER").length) + " Press Replay to watch it being built.";
+})();
+</script>
+
+</body></html>
