@@ -6,7 +6,7 @@ All data is invented. No real customers or calls.
 
 | Path | What it is |
 |---|---|
-| `data/practice/` | Small files for the first labs. 20 calls you can check by eye, and a 12-row messy file |
+| `data/practice/` | Small files for the first labs. 20 calls you can check by eye, a 12-row messy file, and 6-row QA and chat files for Day 2 |
 | `data/*.csv` | The full 30-day contact centre data set, 2 September to 1 October 2026 |
 | `data/db/` | SQL files for the trainer that load everything into PostgreSQL |
 
@@ -17,6 +17,8 @@ All data is invented. No real customers or calls.
 | `calls_sample.csv` | 20 | Labs 2D, 3A to 3E, 5A |
 | `queues_sample.csv` | 4 | Labs 3D and 3E |
 | `messy_calls_sample.csv` | 12 | Labs 4A and 4B |
+| `qa_sample.csv` | 6 | Lab 8A |
+| `chats_sample.csv` | 6 | Lab 8A |
 
 ## Full data files
 
@@ -54,5 +56,5 @@ All data is invented. No real customers or calls.
 |---|---|---|
 | Repeated rows | `calls.csv` has 255, the one-day file has 7 | Labs 3E and 4C |
 | Answered calls with no agent | 4 in the one-day file | Lab 4C |
-| Chat times without a time zone | `chats.csv` | Day 2 |
-| Quality scores stored as text like `85%` | `qa_scores.csv` | Day 2 |
+| Chat times without a time zone | `chats.csv` | Lab 8A |
+| Quality scores stored as text like `85%` | `qa_scores.csv` | Lab 8A |
