@@ -1,8 +1,6 @@
-# Set up your laptop
+# Set up your VM
 
-This takes about 30 minutes. If your trainer has already set up your laptop, skip to [step 6](#6-check-everything).
-
-You need a Windows laptop where you can install programs. If you cannot install programs, tell your trainer before the day.
+Each of you has your own Windows training VM. PostgreSQL 16, pgAdmin and Power BI Desktop are already on it. This page gets the course files, Python and the database ready. It takes about 30 minutes. If your trainer has already done it, skip to [step 6](#6-check-everything).
 
 ## 1. Get the course files
 
@@ -29,11 +27,11 @@ You need a Windows laptop where you can install programs. If you cannot install 
 
 ## 4. Install the database tools
 
-Your trainer will tell you which of these applies to you.
+Each of you has your own training VM with PostgreSQL 16 and pgAdmin already installed. Nobody else uses your database, so nothing you do can break anyone else's work.
 
-Option A: the trainer runs a shared database server. You only need pgAdmin: download it from pgadmin.org and install it. The trainer gives you the server name, a login (`trainee`) and a password.
+The login on every VM is the user `postgres` with the password `admin`. That is fine for a training VM that only you use. Never use a password like that at work.
 
-Option B: you run your own database. Install PostgreSQL 16 from postgresql.org (it includes pgAdmin). Remember the password you choose for the `postgres` user. Then ask your trainer for the database setup steps.
+Build the course database once, before Day 1. Follow "The quick way" in [data/db/README.md](data/db/README.md). It takes a few seconds and ends with a small table showing 51363 and 20. If you ever damage the data, run the same script again: it puts everything back as it was at the start of Day 1.
 
 ## 5. Install the Python packages
 
@@ -65,5 +63,13 @@ You should see a list of checks. Each line starts with OK or MISSING. Fix anythi
 The database password lives in a file called `.env` so it never appears in your code.
 
 1. In VS Code, find `.env.example` in the left panel. Right-click it and choose Copy, then right-click empty space and choose Paste. Rename the copy to `.env`.
-2. Open `.env` and replace the server name and password with the ones your trainer gives you.
+2. Open `.env` and check the line reads `DATABASE_URL=postgresql+psycopg://postgres:admin@localhost:5432/contact_centre`. On the training VMs nothing needs changing.
 3. Save the file and run `python check_setup.py` again. The database line should now say OK.
+
+## Before Day 2
+
+Day 2 needs no new installs in Python. It adds Power BI Desktop, which is already on your VM.
+
+1. **Get the Day 2 files.** Download the course ZIP again from GitHub and extract it over your course folder, or ask your trainer for the new folders (`module-7` to `module-11`, `check_day2.py`, and the new files in `data/practice/`). Your `.env` and `work` folder are not in the ZIP, so they are kept.
+2. **Power BI Desktop.** It is already installed on your VM. Open it once before the day and close any sign-in box. Lab 10A starts with a version check.
+3. **Your database.** Nothing to do before the day. Lab 7A runs one script, `data/db/day2_setup.sql`, and then `python check_day2.py`. Every line should say OK.
